@@ -50,7 +50,7 @@
 
     (doseq [d directories]
       (let [prefix (.getCanonicalPath (io/file d))]
-        (schedule-recompile)
+        ;; (schedule-recompile)
         (when-not (contains? @watches prefix)
           (swap! watches conj prefix)
           (watch-directory (io/file d)
