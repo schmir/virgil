@@ -19,6 +19,24 @@
     SimpleJavaFileObject
     ToolProvider]))
 
+(defn get-java-compiler
+  "Returns an instance of Java compiler. Alternative
+  to `(ToolProvider/getSystemJavaCompiler)` because it doesn't cache the
+  compiler class. Caching creates problems when tools.jar is added onto
+  classpath AFTER the compiler was run. See
+  https://github.com/clojure-emacs/cider-nrepl/issues/463."
+  []
+  ;; Code is rewritten from javax/tools/ToolProvider.java
+  (let [file (io/file (System/getProperty "java.home"))
+        file (if (.equalsIgnoreCase (.getName file) "jre")
+               (.getParentFile file)
+               file)
+        file (io/file file "lib" "tools.jar")
+        urls (into-array java.net.URL  [(.toURL (.toURI file))])
+        cl (java.net.URLClassLoader/newInstance urls)
+        compiler-class (Class/forName "com.sun.tools.javac.api.JavacTool" false cl)]
+    (.newInstance compiler-class)))
+
 ;; a shout-out to https://github.com/tailrecursion/javastar, which
 ;; provided a map for this territory
 
@@ -79,7 +97,7 @@
                             (get class-name))))))))
 
 (defn source->bytecode [name->source]
-  (let [compiler (ToolProvider/getSystemJavaCompiler)
+  (let [compiler (get-java-compiler) ;; (ToolProvider/getSystemJavaCompiler)
         diag     (DiagnosticCollector.)
         cache    (atom {})
         mgr      (class-manager nil (.getStandardFileManager compiler nil nil nil) cache)
